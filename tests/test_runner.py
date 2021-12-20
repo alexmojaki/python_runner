@@ -1,3 +1,4 @@
+import builtins
 import traceback
 from textwrap import dedent
 
@@ -24,11 +25,11 @@ def default_callback(event_type, data):
         return f"input: {len(events)}"
 
 
-def check_simple(source_code, expected_events, mode="exec", callback=default_callback):
+def check_simple(source_code, expected_events, mode="exec", runner=None):
     global events
     events = []
 
-    runner = MyRunner(callback=callback)
+    runner = runner or MyRunner(callback=default_callback)
     result = runner.run(source_code, mode=mode)
     assert events == expected_events
     if mode != "eval":
@@ -273,7 +274,7 @@ def test_non_str_input():
 
     check_simple(
         "input()",
-        callback=callback,
+        runner=MyRunner(callback=callback),
         expected_events=[
             (
                 "output",
@@ -405,3 +406,25 @@ def test_flush_big_output():
             ("output", {"parts": [{"type": "stdout", "text": "9\n" * 500}]}),
         ] * 6,
     )
+
+
+def test_console_locals():
+    runner = MyRunner(callback=default_callback)
+    base_locals = {
+        "__name__": "__main__",
+        "__doc__": None,
+        "__package__": None,
+        "__loader__": None,
+        "__spec__": None,
+        "__file__": "my_program.py",
+        "__builtins__": builtins.__dict__,
+    }
+
+    check_simple("x = 1", [], runner=runner)
+    assert runner.console.locals == base_locals | {"x": 1}
+
+    check_simple("y = 2", [], runner=runner)
+    assert runner.console.locals == base_locals | {"y": 2}
+
+    check_simple("z = 3", [], runner=runner, mode="single")
+    assert runner.console.locals == base_locals | {"y": 2, "z": 3}
