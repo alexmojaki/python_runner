@@ -1,4 +1,5 @@
 import traceback
+from textwrap import dedent
 
 from python_runner import Runner
 
@@ -23,7 +24,7 @@ def check_simple(source_code, expected_events):
     assert events == expected_events
 
 
-def test_print():
+def test_simple_print():
     check_simple(
         "print(1); print(2)",
         [
@@ -36,6 +37,76 @@ def test_print():
                             "text": "1\n2\n",
                         },
                     ],
+                },
+            ),
+        ],
+    )
+
+
+def test_mixed_output():
+    source = dedent(
+        """
+        import sys
+        
+        print(1)
+        print(2)
+        
+        print(3, file=sys.stderr)
+        print(4, file=sys.stderr)
+        
+        print(5)
+        print(6)
+        
+        print(7, file=sys.stderr)
+        print(8, file=sys.stderr)
+        
+        1/0
+        """
+    )
+    check_simple(
+        source,
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stdout", "text": "1\n2\n"},
+                        {"type": "stderr", "text": "3"},
+                    ]
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stderr", "text": "\n4\n"},
+                        {"type": "stdout", "text": "5"},
+                    ]
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stdout", "text": "\n6\n"},
+                        {"type": "stderr", "text": "7"},
+                    ]
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "stderr",
+                            "text": "\n8\n",
+                        },
+                        {
+                            "type": "traceback",
+                            "text": "ZeroDivisionError: division by zero\n",
+                            "source_code": source,
+                        },
+                    ]
                 },
             ),
         ],
