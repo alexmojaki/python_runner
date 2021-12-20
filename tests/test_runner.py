@@ -343,3 +343,48 @@ def test_empty():
     for mode in ["single", "eval", "exec"]:
         for source in ["", "#", "#foo", "#foo\n#bar\n", "\n", " "]:
             check_simple(source, [], mode=mode)
+
+
+def test_flush_direct():
+    check_simple(
+        dedent(
+            """
+            import sys
+            
+            print(1)
+            print(2)
+            
+            sys.stdout.flush()
+            sys.stdout.flush()
+            
+            print(3)
+            print(4)
+            """
+        ),
+        [
+            ("output", {"parts": [{"type": "stdout", "text": "1\n2\n"}]}),
+            ("output", {"parts": [{"type": "stdout", "text": "3\n4\n"}]}),
+        ],
+    )
+
+
+def test_flush_time():
+    check_simple(
+        dedent(
+            """
+            import time
+
+            print(1)
+            print(2)
+
+            time.sleep(1.1)
+
+            print(3)
+            print(4)
+            """
+        ),
+        [
+            ("output", {"parts": [{"type": "stdout", "text": "1\n2\n3"}]}),
+            ("output", {"parts": [{"type": "stdout", "text": "\n4\n"}]}),
+        ],
+    )

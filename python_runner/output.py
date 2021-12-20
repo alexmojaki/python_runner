@@ -30,7 +30,7 @@ class OutputBuffer:
     def should_flush(self):
         return (
             len(self.parts) > 1
-            or self.last_time and self.last_time - time.time() > 1
+            or self.last_time and time.time() - self.last_time > 1
             or sum(len(p["text"]) for p in self.parts) > 1000
         )
 
