@@ -71,6 +71,25 @@ def test_stdout_bytes():
     )
 
 
+def test_stdout_attrs():
+    check_simple(
+        "import sys; print(sys.stdout.encoding, callable(sys.stdout.isatty))",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "stdout",
+                            "text": "utf-8 True\n",
+                        },
+                    ],
+                },
+            ),
+        ],
+    )
+
+
 def test_mixed_output():
     source = dedent(
         """
