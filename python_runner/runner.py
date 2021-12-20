@@ -7,7 +7,6 @@ from code import InteractiveConsole
 from types import ModuleType
 
 from .output import OutputBuffer
-from .utils import format_traceback_string
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +53,7 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e, source_code))
 
     def serialize_traceback(self, exc, source_code):  # noqa
-        return {"text": format_traceback_string(exc)}
+        raise NotImplementedError
 
     def serialize_syntax_error(self, exc, source_code):
         return self.serialize_traceback(exc, source_code)
@@ -103,13 +102,14 @@ class Runner:
         self.output_buffer.reset()
 
 
-class PatchedStdinRunner(Runner):
+class PatchedStdinRunner(Runner):  # noqa
     def execute(self, code_obj, source_code, mode=None):  # noqa
         sys.stdin.readline = self.readline
         builtins.input = self.input
         return super().execute(code_obj, source_code, mode)
 
     def reset(self):
+        super().reset()
         self.line = ""
 
     def non_str_input(self):
