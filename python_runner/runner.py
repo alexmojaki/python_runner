@@ -31,6 +31,7 @@ class Runner:
         self.output_buffer = self.OutputBufferClass(
             lambda parts: self.callback("output", parts=parts)
         )
+        self.setup_module()
 
     def set_callback(self, callback):
         self._callback = callback
@@ -50,10 +51,10 @@ class Runner:
     def output(self, output_type, text, **extra):
         return self.output_buffer.put(output_type, text, **extra)
 
-    def execute(self, code_obj, source_code, run_type=None):  # noqa
+    def execute(self, code_obj, source_code, mode=None):  # noqa
         with self.output_buffer.redirect_std_streams():
             try:
-                exec(code_obj, self.console.locals)  # noqa
+                return eval(code_obj, self.console.locals)  # noqa
             except KeyboardInterrupt:
                 raise
             except Exception as e:
@@ -65,17 +66,13 @@ class Runner:
     def serialize_syntax_error(self, exc, source_code):
         return self.serialize_traceback(exc, source_code)
 
-    def run(self, source_code, run_type="exec"):
-        if run_type == "shell":
-            mode = "single"
+    def run(self, source_code, mode="exec"):
+        compile_mode = mode
+        if mode == "single":
             source_code += "\n"  # Allow compiling single-line compound statements
-        else:
-            mode = "exec"
-            mod = ModuleType("__main__")
-            mod.__file__ = self.filename
-            sys.modules["__main__"] = mod
-            self.console.locals = mod.__dict__
-            self.console.locals.update(self.extra_locals)
+        elif mode != "eval":
+            compile_mode = "exec"
+            self.setup_module()
             self.output_buffer.reset()
             self.line = ""
 
@@ -90,7 +87,7 @@ class Runner:
         result = None
 
         try:
-            code_obj = compile(source_code, filename, mode)
+            code_obj = compile(source_code, filename, compile_mode)
         except SyntaxError as e:
             try:
                 if not ast.parse(source_code).body:
@@ -101,10 +98,17 @@ class Runner:
 
             self.output("syntax_error", **self.serialize_syntax_error(e, source_code))
         else:
-            result = self.execute(code_obj, source_code, run_type)
+            result = self.execute(code_obj, source_code, mode)
 
         self.output_buffer.flush()
         return result
+
+    def setup_module(self):
+        mod = ModuleType("__main__")
+        mod.__file__ = self.filename
+        sys.modules["__main__"] = mod
+        self.console.locals = mod.__dict__
+        self.console.locals.update(self.extra_locals)
 
 
 class PatchedStdinRunner(Runner):

@@ -12,7 +12,7 @@ class MyRunner(PatchedStdinRunner):
         }
 
 
-def check_simple(source_code, expected_events):
+def check_simple(source_code, expected_events, mode="exec"):
     runner = MyRunner()
     events = []
 
@@ -22,8 +22,11 @@ def check_simple(source_code, expected_events):
             return f"input: {len(events)}"
 
     runner.set_callback(callback)
-    runner.run(source_code)
+    result = runner.run(source_code, mode=mode)
     assert events == expected_events
+    if mode != "eval":
+        assert result is None
+    return result
 
 
 def test_simple_print():
@@ -194,4 +197,45 @@ def test_simple_input():
                 },
             ),
         ],
+    )
+
+
+def test_single():
+    check_simple(
+        "1 + 2",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stdout", "text": "3\n"},
+                    ],
+                },
+            ),
+        ],
+        mode="single",
+    )
+
+    check_simple(
+        "for i in range(2): print(i)",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stdout", "text": "0\n1\n"},
+                    ],
+                },
+            ),
+        ],
+        mode="single",
+    )
+
+
+
+def test_eval():
+    assert 3 == check_simple(
+        "1 + 2",
+        [],
+        mode="eval",
     )
