@@ -18,11 +18,9 @@ class Runner:
         self,
         *,
         callback=None,
-        extra_locals=None,
         filename="my_program.py",
     ):
         self.set_callback(callback)
-        self.extra_locals = extra_locals or {}
         self.filename = filename
 
         self.console = InteractiveConsole()
@@ -96,7 +94,6 @@ class Runner:
         mod.__file__ = self.filename
         sys.modules["__main__"] = mod
         self.console.locals = mod.__dict__
-        self.console.locals.update(self.extra_locals)
         self.output_buffer.reset()
 
 
