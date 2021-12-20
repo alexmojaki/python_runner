@@ -71,6 +71,26 @@ def test_stdout_bytes():
     )
 
 
+def test_stdout_write_non_str():
+    check_simple(
+        "import sys; sys.stdout.write(123)",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "traceback",
+                            "text": "TypeError: Can only write str, not int\n",
+                            "source_code": "import sys; sys.stdout.write(123)",
+                        }
+                    ],
+                },
+            ),
+        ],
+    )
+
+
 def test_stdout_attrs():
     check_simple(
         "import sys; print(sys.stdout.encoding, callable(sys.stdout.isatty))",
