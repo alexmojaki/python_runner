@@ -4,6 +4,9 @@ from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
 
 class OutputBuffer:
+    flush_length = 1000
+    flush_time = 1
+
     def __init__(self, flush):
         self._flush = flush
         self.reset()
@@ -30,8 +33,8 @@ class OutputBuffer:
     def should_flush(self):
         return (
             len(self.parts) > 1
-            or self.last_time and time.time() - self.last_time > 1
-            or sum(len(p["text"]) for p in self.parts) >= 1000
+            or self.last_time and time.time() - self.last_time > self.flush_time
+            or sum(len(p["text"]) for p in self.parts) >= self.flush_length
         )
 
     def flush(self):

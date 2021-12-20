@@ -2,6 +2,9 @@ import traceback
 from textwrap import dedent
 
 from python_runner import PatchedStdinRunner
+from python_runner.output import OutputBuffer
+
+OutputBuffer.flush_time = 0.1
 
 
 class MyRunner(PatchedStdinRunner):
@@ -377,7 +380,7 @@ def test_flush_time():
             print(1)
             print(2)
 
-            time.sleep(1.1)
+            time.sleep(0.11)
 
             print(3)
             print(4)
