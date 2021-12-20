@@ -26,21 +26,14 @@ class Runner:
         self.extra_locals = extra_locals or {}
         self.filename = filename
 
-        self.line = ""
         self.console = InteractiveConsole()
         self.output_buffer = self.OutputBufferClass(
             lambda parts: self.callback("output", parts=parts)
         )
-        self.setup_module()
+        self.reset()
 
     def set_callback(self, callback):
         self._callback = callback
-
-    def set_combined_callbacks(self, **callbacks):
-        def callback(event_type, data):
-            return callbacks[event_type](data)
-
-        self.set_callback(callback)
 
     def callback(self, event_type, **data):
         if event_type != "output":
@@ -72,9 +65,7 @@ class Runner:
             source_code += "\n"  # Allow compiling single-line compound statements
         elif mode != "eval":
             compile_mode = "exec"
-            self.setup_module()
-            self.output_buffer.reset()
-            self.line = ""
+            self.reset()
 
         filename = self.filename
         linecache.cache[filename] = (
@@ -103,26 +94,32 @@ class Runner:
         self.output_buffer.flush()
         return result
 
-    def setup_module(self):
+    def reset(self):
         mod = ModuleType("__main__")
         mod.__file__ = self.filename
         sys.modules["__main__"] = mod
         self.console.locals = mod.__dict__
         self.console.locals.update(self.extra_locals)
+        self.output_buffer.reset()
 
 
 class PatchedStdinRunner(Runner):
-    def execute(self, code_obj, source_code, run_type=None):  # noqa
+    def execute(self, code_obj, source_code, mode=None):  # noqa
         sys.stdin.readline = self.readline
         builtins.input = self.input
-        return super().execute(code_obj, source_code, run_type)
+        return super().execute(code_obj, source_code, mode)
+
+    def reset(self):
+        self.line = ""
+
+    def non_str_input(self):
+        raise TypeError(f"Callback for input should return str, not {type(self.line).__name__}")
 
     def readline(self, n=-1, prompt=""):
         if not self.line and n:
             self.line = self.callback("input", prompt=prompt)
             if not isinstance(self.line, str):
-                while True:
-                    pass  # wait for the interrupt
+                self.non_str_input()
             if not self.line.endswith("\n"):
                 self.line += "\n"
             self.output("input", self.line)

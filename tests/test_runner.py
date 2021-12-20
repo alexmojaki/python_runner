@@ -13,7 +13,6 @@ class MyRunner(PatchedStdinRunner):
 
 
 def check_simple(source_code, expected_events, mode="exec"):
-    runner = MyRunner()
     events = []
 
     def callback(event_type, data):
@@ -21,7 +20,7 @@ def check_simple(source_code, expected_events, mode="exec"):
         if event_type == "input":
             return f"input: {len(events)}"
 
-    runner.set_callback(callback)
+    runner = MyRunner(callback=callback)
     result = runner.run(source_code, mode=mode)
     assert events == expected_events
     if mode != "eval":
