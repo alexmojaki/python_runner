@@ -12,13 +12,18 @@ class MyRunner(PatchedStdinRunner):
         }
 
 
-def check_simple(source_code, expected_events, mode="exec"):
-    events = []
+events = []
 
-    def callback(event_type, data):
-        events.append((event_type, data))
-        if event_type == "input":
-            return f"input: {len(events)}"
+
+def default_callback(event_type, data):
+    events.append((event_type, data))
+    if event_type == "input":
+        return f"input: {len(events)}"
+
+
+def check_simple(source_code, expected_events, mode="exec", callback=default_callback):
+    global events
+    events = []
 
     runner = MyRunner(callback=callback)
     result = runner.run(source_code, mode=mode)
@@ -192,6 +197,43 @@ def test_simple_input():
                 {
                     "parts": [
                         {"type": "stdout", "text": "\n"},
+                    ]
+                },
+            ),
+        ],
+    )
+
+
+def test_non_str_input():
+    def callback(event_type, data):
+        if event_type == "input":
+            return
+        return default_callback(event_type, data)
+
+    check_simple(
+        "input()",
+        callback=callback,
+        expected_events=[
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "input_prompt",
+                            "text": "",
+                        },
+                    ],
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "traceback",
+                            "text": "TypeError: Callback for input should return str, not NoneType\n",
+                            "source_code": "input()",
+                        }
                     ]
                 },
             ),
