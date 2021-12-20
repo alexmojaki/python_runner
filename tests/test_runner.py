@@ -388,3 +388,17 @@ def test_flush_time():
             ("output", {"parts": [{"type": "stdout", "text": "\n4\n"}]}),
         ],
     )
+
+
+def test_flush_big_output():
+    check_simple(
+        dedent(
+            """
+            for i in range(3000):
+                print(9)
+            """
+        ),
+        [
+            ("output", {"parts": [{"type": "stdout", "text": "9\n" * 500}]}),
+        ] * 6,
+    )

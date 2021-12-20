@@ -31,7 +31,7 @@ class OutputBuffer:
         return (
             len(self.parts) > 1
             or self.last_time and time.time() - self.last_time > 1
-            or sum(len(p["text"]) for p in self.parts) > 1000
+            or sum(len(p["text"]) for p in self.parts) >= 1000
         )
 
     def flush(self):
