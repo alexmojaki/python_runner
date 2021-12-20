@@ -51,12 +51,13 @@ class Runner:
         return self.output_buffer.put(output_type, text, **extra)
 
     def execute(self, code_obj, source_code, run_type=None):  # noqa
-        try:
-            exec(code_obj, self.console.locals)  # noqa
-        except KeyboardInterrupt:
-            raise
-        except Exception as e:
-            self.output("traceback", **self.serialize_traceback(e, source_code))
+        with self.output_buffer.redirect_std_streams():
+            try:
+                exec(code_obj, self.console.locals)  # noqa
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                self.output("traceback", **self.serialize_traceback(e, source_code))
 
     def serialize_traceback(self, exc, source_code):  # noqa
         return {"text": format_traceback_string(exc)}
@@ -65,14 +66,6 @@ class Runner:
         return self.serialize_traceback(exc, source_code)
 
     def run(self, source_code, run_type="exec"):
-        sys.stdin.readline = self.readline
-        builtins.input = self.input
-        with self.output_buffer.redirect_std_streams():
-            result = self.inner_run(run_type, source_code)
-        self.output_buffer.flush()
-        return result
-
-    def inner_run(self, run_type, source_code):
         if run_type == "shell":
             mode = "single"
             source_code += "\n"  # Allow compiling single-line compound statements
@@ -94,6 +87,8 @@ class Runner:
             filename,
         )
 
+        result = None
+
         try:
             code_obj = compile(source_code, filename, mode)
         except SyntaxError as e:
@@ -105,9 +100,13 @@ class Runner:
                 pass
 
             self.output("syntax_error", **self.serialize_syntax_error(e, source_code))
-            return {}
+        else:
+            sys.stdin.readline = self.readline
+            builtins.input = self.input
+            result = self.execute(code_obj, source_code, run_type)
 
-        return self.execute(code_obj, source_code, run_type)
+        self.output_buffer.flush()
+        return result
 
     def readline(self, n=-1, prompt=""):
         if not self.line and n:
