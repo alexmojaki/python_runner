@@ -1,6 +1,6 @@
 dist
 build
-stack_data/version.py
+python_runner/version.py
 .eggs
 .pytest_cache
 .tox
