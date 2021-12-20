@@ -101,12 +101,17 @@ class Runner:
 
             self.output("syntax_error", **self.serialize_syntax_error(e, source_code))
         else:
-            sys.stdin.readline = self.readline
-            builtins.input = self.input
             result = self.execute(code_obj, source_code, run_type)
 
         self.output_buffer.flush()
         return result
+
+
+class PatchedStdinRunner(Runner):
+    def execute(self, code_obj, source_code, run_type=None):  # noqa
+        sys.stdin.readline = self.readline
+        builtins.input = self.input
+        return super().execute(code_obj, source_code, run_type)
 
     def readline(self, n=-1, prompt=""):
         if not self.line and n:
@@ -126,4 +131,4 @@ class Runner:
 
     def input(self, prompt=""):
         self.output("input_prompt", prompt)
-        return sys.stdin.readline()[:-1]  # Remove trailing newline
+        return sys.stdin.readline(prompt=prompt)[:-1]  # Remove trailing newline

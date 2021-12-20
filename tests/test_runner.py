@@ -1,10 +1,10 @@
 import traceback
 from textwrap import dedent
 
-from python_runner import Runner
+from python_runner import PatchedStdinRunner
 
 
-class MyRunner(Runner):
+class MyRunner(PatchedStdinRunner):
     def serialize_traceback(self, exc, source_code):
         return {
             "text": "".join(traceback.format_exception_only(type(exc), exc)),
@@ -18,6 +18,8 @@ def check_simple(source_code, expected_events):
 
     def callback(event_type, data):
         events.append((event_type, data))
+        if event_type == "input":
+            return f"input: {len(events)}"
 
     runner.set_callback(callback)
     runner.run(source_code)
@@ -154,5 +156,42 @@ def test_runtime_error():
                     ]
                 },
             )
+        ],
+    )
+
+
+def test_simple_input():
+    check_simple(
+        "input('some_prompt'); print('after')",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "input_prompt", "text": "some_prompt"},
+                    ]
+                },
+            ),
+            (
+                "input",
+                {"prompt": "some_prompt"},
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "input", "text": "input: 2\n"},
+                        {"type": "stdout", "text": "after"},
+                    ]
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"type": "stdout", "text": "\n"},
+                    ]
+                },
+            ),
         ],
     )
