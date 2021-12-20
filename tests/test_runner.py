@@ -331,10 +331,17 @@ def test_single():
     )
 
 
-
 def test_eval():
     assert 3 == check_simple(
         "1 + 2",
         [],
         mode="eval",
     )
+
+
+def test_empty():
+    check_simple("", [])
+
+
+def test_comments_only():
+    check_simple("#foo\n#bar\n", [])
