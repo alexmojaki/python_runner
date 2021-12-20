@@ -340,8 +340,6 @@ def test_eval():
 
 
 def test_empty():
-    check_simple("", [])
-
-
-def test_comments_only():
-    check_simple("#foo\n#bar\n", [])
+    for mode in ["single", "eval", "exec"]:
+        for source in ["", "#", "#foo", "#foo\n#bar\n", "\n", " "]:
+            check_simple(source, [], mode=mode)

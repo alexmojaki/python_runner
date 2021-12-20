@@ -47,13 +47,11 @@ class Runner:
         with self.output_buffer.redirect_std_streams():
             try:
                 return eval(code_obj, self.console.locals)  # noqa
-            except KeyboardInterrupt:
-                raise
             except Exception as e:
                 self.output("traceback", **self.serialize_traceback(e, source_code))
 
     def serialize_traceback(self, exc, source_code):  # noqa
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def serialize_syntax_error(self, exc, source_code):
         return self.serialize_traceback(exc, source_code)
