@@ -4,6 +4,7 @@ import linecache
 import logging
 import sys
 from code import InteractiveConsole
+from contextlib import contextmanager
 from types import ModuleType
 
 from .output import OutputBuffer
@@ -42,11 +43,28 @@ class Runner:
         return self.output_buffer.put(output_type, text, **extra)
 
     def execute(self, code_obj, source_code, mode=None):  # noqa
+        return eval(code_obj, self.console.locals)  # noqa
+
+    @contextmanager
+    def _execute_context(self, source_code):
         with self.output_buffer.redirect_std_streams():
             try:
-                return eval(code_obj, self.console.locals)  # noqa
+                yield
             except Exception as e:
                 self.output("traceback", **self.serialize_traceback(e, source_code))
+        self.post_run()
+
+    def run(self, source_code, mode="exec"):
+        code_obj = self.pre_run(source_code, mode)
+        with self._execute_context(source_code):
+            if code_obj:
+                return self.execute(code_obj, source_code, mode)
+
+    async def run_async(self, source_code, mode="exec", top_level_await=True):
+        code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
+        with self._execute_context(source_code):
+            if code_obj:
+                return await self.execute(code_obj, source_code, mode)
 
     def serialize_traceback(self, exc, source_code):  # noqa
         raise NotImplementedError  # pragma: no cover
@@ -54,7 +72,7 @@ class Runner:
     def serialize_syntax_error(self, exc, source_code):
         return self.serialize_traceback(exc, source_code)
 
-    def run(self, source_code, mode="exec"):
+    def pre_run(self, source_code, mode="exec", top_level_await=False):
         compile_mode = mode
         if mode == "single":
             source_code += "\n"  # Allow compiling single-line compound statements
@@ -70,10 +88,13 @@ class Runner:
             filename,
         )
 
-        result = None
-
         try:
-            code_obj = compile(source_code, filename, compile_mode)
+            return compile(
+                source_code,
+                filename,
+                compile_mode,
+                flags=top_level_await * ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
+            )
         except SyntaxError as e:
             try:
                 if not ast.parse(source_code).body:
@@ -83,11 +104,9 @@ class Runner:
                 pass
 
             self.output("syntax_error", **self.serialize_syntax_error(e, source_code))
-        else:
-            result = self.execute(code_obj, source_code, mode)
 
+    def post_run(self):
         self.output_buffer.flush()
-        return result
 
     def reset(self):
         mod = ModuleType("__main__")

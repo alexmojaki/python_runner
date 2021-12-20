@@ -1,3 +1,4 @@
+import asyncio
 import builtins
 import traceback
 from textwrap import dedent
@@ -428,3 +429,55 @@ def test_console_locals():
 
     check_simple("z = 3", [], runner=runner, mode="single")
     assert runner.console.locals == base_locals | {"y": 2, "z": 3}
+
+
+def test_await_syntax_error():
+    check_simple(
+        "await b",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "syntax_error",
+                            "text": (
+                                '  File "my_program.py", line 1\n'
+                                "SyntaxError: 'await' outside function\n"
+                            ),
+                            "source_code": "await b",
+                        }
+                    ]
+                },
+            )
+        ],
+    )
+
+
+def test_await():
+    global events
+    events = []
+
+    runner = MyRunner(callback=default_callback)
+    result = runner.run_async(
+        dedent(
+            """
+    async def foo():
+        print('hi')
+    
+    await foo()
+            """
+        )
+    )
+    assert events == []
+    asyncio.run(result, debug=True)
+    assert events == [
+        (
+            "output",
+            {
+                "parts": [
+                    {"type": "stdout", "text": "hi\n"},
+                ],
+            },
+        ),
+    ]
