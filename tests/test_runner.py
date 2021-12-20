@@ -52,6 +52,25 @@ def test_simple_print():
     )
 
 
+def test_stdout_bytes():
+    check_simple(
+        "import sys; sys.stdout.write(b'abc' + '☃'.encode())",
+        [
+            (
+                "output",
+                {
+                    "parts": [
+                        {
+                            "type": "stdout",
+                            "text": "abc☃",
+                        },
+                    ],
+                },
+            ),
+        ],
+    )
+
+
 def test_mixed_output():
     source = dedent(
         """
