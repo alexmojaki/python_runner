@@ -95,7 +95,7 @@ class Runner:
             try:
                 if not ast.parse(source_code).body:
                     # Code is only comments, which cannot be compiled in 'single' mode
-                    return {}
+                    return
             except SyntaxError:
                 pass
 
@@ -131,4 +131,4 @@ class PatchedStdinRunner(Runner):
 
     def input(self, prompt=""):
         self.output("input_prompt", prompt)
-        return sys.stdin.readline(prompt=prompt)[:-1]  # Remove trailing newline
+        return self.readline(prompt=prompt)[:-1]  # Remove trailing newline
