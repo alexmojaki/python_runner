@@ -5,7 +5,7 @@ from textwrap import dedent
 
 import pytest
 
-from python_runner import PatchedStdinRunner
+from python_runner import PatchedStdinRunner, PatchedSleepRunner
 from python_runner.output import OutputBuffer
 
 OutputBuffer.flush_time = 0.1
@@ -453,6 +453,22 @@ def test_await_syntax_error():
                 },
             )
         ],
+    )
+
+
+def test_sleep():
+    class SleepRunner(MyRunner, PatchedSleepRunner):
+        pass
+
+    check_simple(
+        "import time; time.sleep(123)",
+        [
+            (
+                "sleep",
+                {"seconds": 123},
+            ),
+        ],
+        runner=SleepRunner(callback=default_callback),
     )
 
 

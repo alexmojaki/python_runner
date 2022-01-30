@@ -1,1 +1,1 @@
-from .runner import Runner, PatchedStdinRunner
+from .runner import Runner, PatchedStdinRunner, PatchedSleepRunner

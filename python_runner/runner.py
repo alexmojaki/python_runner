@@ -3,6 +3,7 @@ import builtins
 import linecache
 import logging
 import sys
+import time
 from code import InteractiveConsole
 from contextlib import contextmanager
 from types import ModuleType
@@ -120,10 +121,10 @@ class Runner:
 
 
 class PatchedStdinRunner(Runner):  # noqa
-    def execute(self, code_obj, source_code, mode=None):  # noqa
+    def execute(self, *args, **kwargs):
         sys.stdin.readline = self.readline
         builtins.input = self.input
-        return super().execute(code_obj, source_code, mode)
+        return super().execute(*args, **kwargs)
 
     def reset(self):
         super().reset()
@@ -150,3 +151,12 @@ class PatchedStdinRunner(Runner):  # noqa
     def input(self, prompt=""):
         self.output("input_prompt", prompt)
         return self.readline(prompt=prompt)[:-1]  # Remove trailing newline
+
+
+class PatchedSleepRunner(Runner):  # noqa
+    def execute(self, *args, **kwargs):
+        time.sleep = self.sleep
+        return super().execute(*args, **kwargs)
+
+    def sleep(self, seconds):
+        return self.callback("sleep", seconds=seconds)
