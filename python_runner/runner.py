@@ -79,6 +79,7 @@ class Runner:
         elif mode != "eval":
             compile_mode = "exec"
             self.reset()
+        self.output_buffer.reset()
 
         filename = self.filename
         linecache.cache[filename] = (
