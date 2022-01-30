@@ -50,7 +50,9 @@ class Runner:
         with self.output_buffer.redirect_std_streams():
             try:
                 yield
-            except Exception as e:
+            except KeyboardInterrupt:
+                raise
+            except BaseException as e:
                 self.output("traceback", **self.serialize_traceback(e, source_code))
         self.post_run()
 

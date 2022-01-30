@@ -3,6 +3,8 @@ import builtins
 import traceback
 from textwrap import dedent
 
+import pytest
+
 from python_runner import PatchedStdinRunner
 from python_runner.output import OutputBuffer
 
@@ -452,6 +454,11 @@ def test_await_syntax_error():
             )
         ],
     )
+
+
+def test_interrupt():
+    with pytest.raises(KeyboardInterrupt):
+        check_simple("raise KeyboardInterrupt", [])
 
 
 def test_await():
