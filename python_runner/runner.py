@@ -134,17 +134,18 @@ class PatchedStdinRunner(Runner):  # noqa
         super().reset()
         self.line = ""
 
-    def non_str_input(self):
-        raise TypeError(f"Callback for input should return str, not {type(self.line).__name__}")
+    def non_str_input(self, value):
+        raise TypeError(f"Callback for input should return str, not {type(value).__name__}")
 
     def readline(self, n=-1, prompt=""):
         if not self.line and n:
-            self.line = self.callback("input", prompt=prompt)
-            if not isinstance(self.line, str):
-                self.non_str_input()
-            if not self.line.endswith("\n"):
-                self.line += "\n"
-            self.output("input", self.line)
+            value = self.callback("input", prompt=prompt)
+            if not isinstance(value, str):
+                value = self.non_str_input(value) or ""
+            if not value.endswith("\n"):
+                value += "\n"
+            self.output("input", value)
+            self.line = value
 
         if n < 0 or n > len(self.line):
             n = len(self.line)

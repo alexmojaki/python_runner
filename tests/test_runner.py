@@ -307,6 +307,46 @@ def test_non_str_input():
     )
 
 
+def test_custom_non_str_input():
+    class Runner(MyRunner):
+        def non_str_input(self, value):
+            print(repr(value))
+
+    def callback(event_type, data):
+        if event_type == "input":
+            return 123
+        return default_callback(event_type, data)
+
+    runner = Runner(callback=callback)
+    assert runner.line == ""
+
+    check_simple(
+        "input()",
+        runner=runner,
+        expected_events=[
+            (
+                "output",
+                {
+                    "parts": [
+                        {"text": "", "type": "input_prompt"},
+                    ],
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"text": "123\n", "type": "stdout"},
+                        {"text": "\n", "type": "input"},
+                    ]
+                },
+            ),
+        ],
+    )
+
+    assert runner.line == ""
+
+
 def test_single():
     check_simple(
         "1 + 2",
