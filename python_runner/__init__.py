@@ -1,4 +1,4 @@
-from .runner import Runner, PatchedStdinRunner, PatchedSleepRunner
+from .runner import Runner, PatchedStdinRunner, PatchedSleepRunner, PyodideRunner
 
 try:
     from .version import __version__
