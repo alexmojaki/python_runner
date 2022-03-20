@@ -185,15 +185,30 @@ class PyodideRunner(PatchedStdinRunner, PatchedSleepRunner):  # noqa # pragma: n
     )
     InterruptError = KeyboardInterrupt
 
-    def readline(self, *args, **kwargs):
+    def pyodide_error(self, e: Exception):
         import pyodide  # noqa
 
+        js_error = e.js_error  # type: ignore
+        typ = getattr(js_error, "type", "")
+        err = getattr(self, typ, None)
+        if err:
+            raise err from None
+        else:
+            raise
+
+    def readline(self, *args, **kwargs):
         try:
             return super().readline(*args, **kwargs)
-        except pyodide.JsException as e:
-            typ = getattr(e.js_error, "type", "")
-            err = getattr(self, typ, None)
-            if err:
-                raise err from None
-            else:
+        except Exception as e:
+            self.pyodide_error(e)
+
+    def sleep(self, *args, **kwargs):
+        try:
+            return super().sleep(*args, **kwargs)
+        except Exception as e:
+            try:
+                self.pyodide_error(e)
+            except KeyboardInterrupt:
                 raise
+            else:
+                pass
