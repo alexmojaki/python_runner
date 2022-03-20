@@ -169,3 +169,31 @@ class PatchedSleepRunner(Runner):  # noqa
         if not seconds >= 0:
             raise ValueError("sleep length must be non-negative")
         return self.callback("sleep", seconds=seconds)
+
+
+class PyodideRunner(PatchedStdinRunner, PatchedSleepRunner):  # noqa # pragma: no cover
+    ServiceWorkerError = RuntimeError(
+        "The service worker for reading input isn't working. "
+        "Try closing all this site's tabs, then reopening. "
+        "If that doesn't work, try using a different browser."
+    )
+
+    NoChannelError = RuntimeError(
+        "This browser doesn't support reading input. "
+        "Try upgrading to the most recent version or switching to a different browser, "
+        "e.g. Chrome or Firefox."
+    )
+    InterruptError = KeyboardInterrupt
+
+    def readline(self, *args, **kwargs):
+        import pyodide  # noqa
+
+        try:
+            return super().readline(*args, **kwargs)
+        except pyodide.JsException as e:
+            typ = getattr(e.js_error, "type", "")
+            err = getattr(self, typ, None)
+            if err:
+                raise err from None
+            else:
+                raise
