@@ -504,3 +504,32 @@ def test_await():
             },
         ),
     ]
+
+
+def test_async_without_await():
+    global events
+    events = []
+
+    runner = MyRunner(callback=default_callback)
+    result = runner.run_async(
+        dedent(
+            """
+    def foo():
+        print('hi')
+
+    foo()
+            """
+        )
+    )
+    assert events == []
+    asyncio.run(result, debug=True)
+    assert events == [
+        (
+            "output",
+            {
+                "parts": [
+                    {"type": "stdout", "text": "hi\n"},
+                ],
+            },
+        ),
+    ]

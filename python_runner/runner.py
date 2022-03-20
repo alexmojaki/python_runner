@@ -5,6 +5,7 @@ import logging
 import sys
 import time
 from code import InteractiveConsole
+from collections.abc import Awaitable
 from contextlib import contextmanager
 from types import ModuleType
 
@@ -67,7 +68,10 @@ class Runner:
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context(source_code):
             if code_obj:
-                return await self.execute(code_obj, source_code, mode)
+                result = self.execute(code_obj, source_code, mode)
+                while isinstance(result, Awaitable):
+                    result = await result
+                return result
 
     def serialize_traceback(self, exc, source_code):  # noqa
         raise NotImplementedError  # pragma: no cover
