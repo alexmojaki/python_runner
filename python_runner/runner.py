@@ -163,4 +163,8 @@ class PatchedSleepRunner(Runner):  # noqa
         return super().execute(*args, **kwargs)
 
     def sleep(self, seconds):
+        if not isinstance(seconds, (int, float)):
+            raise TypeError(f"an integer is required (got type {type(seconds).__name__})")
+        if not seconds >= 0:
+            raise ValueError("sleep length must be non-negative")
         return self.callback("sleep", seconds=seconds)

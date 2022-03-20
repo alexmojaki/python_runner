@@ -1,5 +1,6 @@
 import asyncio
 import builtins
+import time
 import traceback
 from textwrap import dedent
 
@@ -533,3 +534,16 @@ def test_async_without_await():
             },
         ),
     ]
+
+
+def test_invalid_sleep():
+    runner = PatchedSleepRunner()
+    for arg in [-1, float('nan'), "", 1+2j, None]:
+        with pytest.raises(Exception):
+            try:
+                time.sleep(arg)
+            except Exception as e:
+                assert isinstance(e, (ValueError, TypeError))
+                with pytest.raises(type(e)):
+                    runner.sleep(arg)
+                raise
