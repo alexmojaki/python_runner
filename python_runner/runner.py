@@ -37,8 +37,12 @@ class Runner:
 
     def set_source_code(self, source_code, filename):
         self.filename = os.path.normcase(os.path.abspath(filename))
-        with open(self.filename, "w") as f:
-            f.write(source_code)
+        # Write to file if permitted by system
+        try:
+            with open(self.filename, "w") as f:
+                f.write(source_code)
+        except: 
+            pass 
         linecache.cache[self.filename] = (
             len(source_code),
             0,
@@ -103,7 +107,7 @@ class Runner:
         try:
             return compile(
                 source_code,
-                filename,
+                self.filename,
                 compile_mode,
                 flags=top_level_await * ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
             )
