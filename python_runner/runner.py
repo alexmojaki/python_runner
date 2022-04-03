@@ -129,10 +129,10 @@ class Runner:
 
 
 class PatchedStdinRunner(Runner):  # noqa
-    def execute(self, *args, **kwargs):
+    def pre_run(self, *args, **kwargs):
         sys.stdin.readline = self.readline
         builtins.input = self.input
-        return super().execute(*args, **kwargs)
+        return super().pre_run(*args, **kwargs)
 
     def reset(self):
         super().reset()
@@ -163,9 +163,9 @@ class PatchedStdinRunner(Runner):  # noqa
 
 
 class PatchedSleepRunner(Runner):  # noqa
-    def execute(self, *args, **kwargs):
+    def pre_run(self, *args, **kwargs):
         time.sleep = self.sleep
-        return super().execute(*args, **kwargs)
+        return super().pre_run(*args, **kwargs)
 
     def sleep(self, seconds):
         if not isinstance(seconds, (int, float)):
