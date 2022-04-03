@@ -489,6 +489,8 @@ def test_await_syntax_error():
                             "type": "syntax_error",
                             "text": (
                                 f'  File "{filename}", line 1\n'
+                                '    await b\n'
+                                '    ^\n'
                                 "SyntaxError: 'await' outside function\n"
                             ),
                             "source_code": "await b",
@@ -517,8 +519,12 @@ def test_sleep():
 
 
 def test_interrupt():
-    with pytest.raises(KeyboardInterrupt):
-        check_simple("raise KeyboardInterrupt", [])
+    check_simple("raise KeyboardInterrupt", [
+        ('output',
+            {'parts': [{'source_code': 'raise KeyboardInterrupt',
+                        'text': 'KeyboardInterrupt\n',
+                        'type': 'traceback'}]}),
+    ])
 
 
 def test_await():
