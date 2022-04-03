@@ -10,3 +10,4 @@ venv
 *.pyc
 *.pyo
 __pycache__
+.coverage
