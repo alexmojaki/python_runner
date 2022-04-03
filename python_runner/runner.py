@@ -2,6 +2,7 @@ import ast
 import builtins
 import linecache
 import logging
+import os
 import sys
 import time
 from code import InteractiveConsole
@@ -24,7 +25,7 @@ class Runner:
         filename="my_program.py",
     ):
         self.set_callback(callback)
-        self.filename = filename
+        self.set_source_code("", filename)
         self.console = InteractiveConsole()
         self.output_buffer = self.OutputBufferClass(
             lambda parts: self.callback("output", parts=parts)
@@ -33,6 +34,18 @@ class Runner:
 
     def set_callback(self, callback):
         self._callback = callback
+
+    def set_source_code(self, source_code, filename):
+        self.filename = os.path.normcase(os.path.abspath(filename))
+        with open(self.filename, "w") as f:
+            f.write(source_code)
+        linecache.cache[self.filename] = (
+            len(source_code),
+            0,
+            [line + "\n" for line in source_code.splitlines()],
+            filename,
+        )
+
 
     def callback(self, event_type, **data):
         if event_type != "output":
@@ -85,13 +98,7 @@ class Runner:
             self.reset()
         self.output_buffer.reset()
 
-        filename = self.filename
-        linecache.cache[filename] = (
-            len(source_code),
-            0,
-            [line + "\n" for line in source_code.splitlines()],
-            filename,
-        )
+        self.set_source_code(source_code, filename=self.filename)
 
         try:
             return compile(
