@@ -14,10 +14,10 @@ OutputBuffer.flush_time = 0.1
 
 
 class MyRunner(PatchedStdinRunner):
-    def serialize_traceback(self, exc, source_code):
+    def serialize_traceback(self, exc):
         return {
             "text": "".join(traceback.format_exception_only(type(exc), exc)),
-            "source_code": source_code,
+            "source_code": self.source_code,
         }
 
 
