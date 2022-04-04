@@ -221,7 +221,5 @@ class PyodideRunner(PatchedStdinRunner, PatchedSleepRunner):  # noqa # pragma: n
         except Exception as e:
             try:
                 self.pyodide_error(e)
-            except KeyboardInterrupt:
-                raise
-            else:
+            except (self.ServiceWorkerError, self.NoChannelError):
                 pass
