@@ -518,15 +518,6 @@ def test_sleep():
     )
 
 
-def test_interrupt():
-    check_simple("raise KeyboardInterrupt", [
-        ('output',
-            {'parts': [{'source_code': 'raise KeyboardInterrupt',
-                        'text': 'KeyboardInterrupt\n',
-                        'type': 'traceback'}]}),
-    ])
-
-
 def test_await():
     global events
     events = []
