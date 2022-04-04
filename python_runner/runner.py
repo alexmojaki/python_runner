@@ -26,7 +26,8 @@ class Runner:
         filename="my_program.py",
     ):
         self.set_callback(callback)
-        self.set_source_code(source_code, filename)
+        self.set_filename(filename)
+        self.set_source_code(source_code)
         self.console = InteractiveConsole()
         self.output_buffer = self.OutputBufferClass(
             lambda parts: self.callback("output", parts=parts)
@@ -36,9 +37,11 @@ class Runner:
     def set_callback(self, callback):
         self._callback = callback
 
-    def set_source_code(self, source_code, filename):
-        self.source_code = source_code
+    def set_filename(self, filename):
         self.filename = os.path.normcase(os.path.abspath(filename))
+
+    def set_source_code(self, source_code):
+        self.source_code = source_code
         # Write to file if permitted by system
         try:
             with open(self.filename, "w") as f:
@@ -49,7 +52,7 @@ class Runner:
             len(self.source_code),
             0,
             [line + "\n" for line in self.source_code.splitlines()],
-            filename,
+            self.filename,
         )
 
 
@@ -74,14 +77,14 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
-    def run(self, source_code, mode="exec", top_level_await=False, filename=None):
-        code_obj = self.pre_run(source_code, mode=mode, top_level_await=top_level_await, filename=filename)
+    def run(self, source_code, mode="exec"):
+        code_obj = self.pre_run(source_code, mode=mode)
         with self._execute_context():
             if code_obj:
                 return self.execute(code_obj, mode)
 
-    async def run_async(self, source_code, mode="exec", top_level_await=True, filename=None):
-        code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await, filename=filename)
+    async def run_async(self, source_code, mode="exec", top_level_await=True):
+        code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context():
             if code_obj:
                 result = self.execute(code_obj, mode)
@@ -95,7 +98,7 @@ class Runner:
     def serialize_syntax_error(self, exc):
         return self.serialize_traceback(exc)
 
-    def pre_run(self, source_code, mode="exec", top_level_await=False, filename=None):
+    def pre_run(self, source_code, mode="exec", top_level_await=False):
         compile_mode = mode
         if mode == "single":
             source_code += "\n"  # Allow compiling single-line compound statements
@@ -104,7 +107,7 @@ class Runner:
             self.reset()
         self.output_buffer.reset()
 
-        self.set_source_code(source_code, filename=filename or self.filename)
+        self.set_source_code(source_code)
 
         try:
             return compile(
