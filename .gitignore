@@ -11,3 +11,4 @@ venv
 *.pyo
 __pycache__
 .coverage
+tests/my_program.py
