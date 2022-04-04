@@ -41,7 +41,7 @@ class Runner:
         try:
             with open(self.filename, "w") as f:
                 f.write(source_code)
-        except: 
+        except:  # pragma: no cover
             pass 
         linecache.cache[self.filename] = (
             len(source_code),
