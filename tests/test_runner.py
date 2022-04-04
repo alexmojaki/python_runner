@@ -1,5 +1,6 @@
 import asyncio
 import builtins
+import os
 import time
 import traceback
 from textwrap import dedent
@@ -13,10 +14,10 @@ OutputBuffer.flush_time = 0.1
 
 
 class MyRunner(PatchedStdinRunner):
-    def serialize_traceback(self, exc, source_code):
+    def serialize_traceback(self, exc):
         return {
             "text": "".join(traceback.format_exception_only(type(exc), exc)),
-            "source_code": source_code,
+            "source_code": self.source_code,
         }
 
 
@@ -189,6 +190,7 @@ def test_mixed_output():
 
 
 def test_syntax_error():
+    filename = os.path.normcase(os.path.abspath("my_program.py"))
     check_simple(
         "a b",
         [
@@ -199,7 +201,7 @@ def test_syntax_error():
                         {
                             "type": "syntax_error",
                             "text": (
-                                '  File "my_program.py", line 1\n'
+                                f'  File "{filename}", line 1\n'
                                 "    a b\n"
                                 "      ^\n"
                                 "SyntaxError: invalid syntax\n"
@@ -460,7 +462,7 @@ def test_console_locals():
         "__package__": None,
         "__loader__": None,
         "__spec__": None,
-        "__file__": "my_program.py",
+        "__file__": os.path.normcase(os.path.abspath("my_program.py")),
         "__builtins__": builtins.__dict__,
     }
 
@@ -475,6 +477,7 @@ def test_console_locals():
 
 
 def test_await_syntax_error():
+    filename = os.path.normcase(os.path.abspath("my_program.py"))
     check_simple(
         "await b",
         [
@@ -485,7 +488,9 @@ def test_await_syntax_error():
                         {
                             "type": "syntax_error",
                             "text": (
-                                '  File "my_program.py", line 1\n'
+                                f'  File "{filename}", line 1\n'
+                                '    await b\n'
+                                '    ^\n'
                                 "SyntaxError: 'await' outside function\n"
                             ),
                             "source_code": "await b",
@@ -511,11 +516,6 @@ def test_sleep():
         ],
         runner=SleepRunner(callback=default_callback),
     )
-
-
-def test_interrupt():
-    with pytest.raises(KeyboardInterrupt):
-        check_simple("raise KeyboardInterrupt", [])
 
 
 def test_await():

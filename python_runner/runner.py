@@ -2,6 +2,7 @@ import ast
 import builtins
 import linecache
 import logging
+import os
 import sys
 import time
 from code import InteractiveConsole
@@ -21,11 +22,12 @@ class Runner:
         self,
         *,
         callback=None,
+        source_code="",
         filename="my_program.py",
     ):
         self.set_callback(callback)
-        self.filename = filename
-
+        self.set_filename(filename)
+        self.set_source_code(source_code)
         self.console = InteractiveConsole()
         self.output_buffer = self.OutputBufferClass(
             lambda parts: self.callback("output", parts=parts)
@@ -34,6 +36,25 @@ class Runner:
 
     def set_callback(self, callback):
         self._callback = callback
+
+    def set_filename(self, filename):
+        self.filename = os.path.normcase(os.path.abspath(filename))
+
+    def set_source_code(self, source_code):
+        self.source_code = source_code
+        # Write to file if permitted by system
+        try:
+            with open(self.filename, "w") as f:
+                f.write(self.source_code)
+        except:  # pragma: no cover
+            pass 
+        linecache.cache[self.filename] = (
+            len(self.source_code),
+            0,
+            [line + "\n" for line in self.source_code.splitlines()],
+            self.filename,
+        )
+
 
     def callback(self, event_type, **data):
         if event_type != "output":
@@ -44,40 +65,38 @@ class Runner:
     def output(self, output_type, text, **extra):
         return self.output_buffer.put(output_type, text, **extra)
 
-    def execute(self, code_obj, source_code, mode=None):  # noqa
+    def execute(self, code_obj, mode=None):  # noqa
         return eval(code_obj, self.console.locals)  # noqa
 
     @contextmanager
-    def _execute_context(self, source_code):
+    def _execute_context(self):
         with self.output_buffer.redirect_std_streams():
             try:
                 yield
-            except KeyboardInterrupt:
-                raise
             except BaseException as e:
-                self.output("traceback", **self.serialize_traceback(e, source_code))
+                self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
     def run(self, source_code, mode="exec"):
-        code_obj = self.pre_run(source_code, mode)
-        with self._execute_context(source_code):
+        code_obj = self.pre_run(source_code, mode=mode)
+        with self._execute_context():
             if code_obj:
-                return self.execute(code_obj, source_code, mode)
+                return self.execute(code_obj, mode)
 
     async def run_async(self, source_code, mode="exec", top_level_await=True):
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
-        with self._execute_context(source_code):
+        with self._execute_context():
             if code_obj:
-                result = self.execute(code_obj, source_code, mode)
+                result = self.execute(code_obj, mode)
                 while isinstance(result, Awaitable):
                     result = await result
                 return result
 
-    def serialize_traceback(self, exc, source_code):  # noqa
+    def serialize_traceback(self, exc):  # noqa
         raise NotImplementedError  # pragma: no cover
 
-    def serialize_syntax_error(self, exc, source_code):
-        return self.serialize_traceback(exc, source_code)
+    def serialize_syntax_error(self, exc):
+        return self.serialize_traceback(exc)
 
     def pre_run(self, source_code, mode="exec", top_level_await=False):
         compile_mode = mode
@@ -88,30 +107,24 @@ class Runner:
             self.reset()
         self.output_buffer.reset()
 
-        filename = self.filename
-        linecache.cache[filename] = (
-            len(source_code),
-            0,
-            [line + "\n" for line in source_code.splitlines()],
-            filename,
-        )
+        self.set_source_code(source_code)
 
         try:
             return compile(
-                source_code,
-                filename,
+                self.source_code,
+                self.filename,
                 compile_mode,
                 flags=top_level_await * ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
             )
         except SyntaxError as e:
             try:
-                if not ast.parse(source_code).body:
+                if not ast.parse(self.source_code).body:
                     # Code is only comments, which cannot be compiled in 'single' mode
                     return
             except SyntaxError:
                 pass
 
-            self.output("syntax_error", **self.serialize_syntax_error(e, source_code))
+            self.output("syntax_error", **self.serialize_syntax_error(e))
 
     def post_run(self):
         self.output_buffer.flush()
@@ -125,10 +138,10 @@ class Runner:
 
 
 class PatchedStdinRunner(Runner):  # noqa
-    def execute(self, *args, **kwargs):
+    def pre_run(self, *args, **kwargs):
         sys.stdin.readline = self.readline
         builtins.input = self.input
-        return super().execute(*args, **kwargs)
+        return super().pre_run(*args, **kwargs)
 
     def reset(self):
         super().reset()
@@ -159,9 +172,9 @@ class PatchedStdinRunner(Runner):  # noqa
 
 
 class PatchedSleepRunner(Runner):  # noqa
-    def execute(self, *args, **kwargs):
+    def pre_run(self, *args, **kwargs):
         time.sleep = self.sleep
-        return super().execute(*args, **kwargs)
+        return super().pre_run(*args, **kwargs)
 
     def sleep(self, seconds):
         if not isinstance(seconds, (int, float)):
