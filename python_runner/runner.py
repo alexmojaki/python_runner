@@ -10,7 +10,7 @@ from collections.abc import Awaitable
 from contextlib import contextmanager
 from types import ModuleType
 
-from .output import OutputBuffer
+from .output import OutputBuffer, SysStream
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,10 @@ class Runner:
     def output(self, output_type, text, **extra):
         return self.output_buffer.put(output_type, text, **extra)
 
-    def execute(self, code_obj, mode=None):  # noqa
+    def execute(self, code_obj, mode=None, **kwargs):  # noqa
+        if mode == "snoop":
+            from .snoop import exec_snoop
+            exec_snoop(self, code_obj, out=SysStream("snoop", self.output_buffer), **kwargs)
         return eval(code_obj, self.console.locals)  # noqa
 
     @contextmanager
@@ -77,17 +80,17 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
-    def run(self, source_code, mode="exec"):
+    def run(self, source_code, mode="exec", **kwargs):
         code_obj = self.pre_run(source_code, mode=mode)
         with self._execute_context():
             if code_obj:
-                return self.execute(code_obj, mode)
+                return self.execute(code_obj, mode=mode, **kwargs)
 
-    async def run_async(self, source_code, mode="exec", top_level_await=True):
+    async def run_async(self, source_code, mode="exec", top_level_await=True, **kwargs):
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context():
             if code_obj:
-                result = self.execute(code_obj, mode)
+                result = self.execute(code_obj, mode=mode, **kwargs)
                 while isinstance(result, Awaitable):
                     result = await result
                 return result

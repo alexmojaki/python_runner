@@ -587,3 +587,23 @@ def test_invalid_sleep():
                 with pytest.raises(type(e)):
                     runner.sleep(arg)
                 raise
+
+def test_snoop():
+    code = dedent(
+        """
+    def factorial(x):
+        if x <= 1:
+            return x
+        return x * factorial(x - 1)
+
+    factorial(5)
+        """)
+    global events
+    events = []
+    runner = MyRunner(callback=default_callback)
+    result = runner.run(code, mode="snoop", color=False)
+    assert events
+    for (event_type, data) in events:
+        assert event_type == "output"
+        for part in data["parts"]:
+            assert part["type"] == "snoop"
