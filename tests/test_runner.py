@@ -10,8 +10,6 @@ import pytest
 from python_runner import PatchedStdinRunner, PatchedSleepRunner
 from python_runner.output import OutputBuffer
 
-OutputBuffer.flush_time = 0.1
-
 
 class MyRunner(PatchedStdinRunner):
     def serialize_traceback(self, exc):
@@ -32,7 +30,15 @@ def default_callback(event_type, data):
         return f"input: {len(events)}"
 
 
-def check_simple(source_code, expected_events, mode="exec", runner=None):
+def check_simple(
+    source_code,
+    expected_events,
+    mode="exec",
+    runner=None,
+    flush_time=OutputBuffer.flush_time,
+):
+    OutputBuffer.flush_time = flush_time
+
     global events
     events = []
 
@@ -439,6 +445,7 @@ def test_flush_time():
             ("output", {"parts": [{"type": "stdout", "text": "1\n2\n3"}]}),
             ("output", {"parts": [{"type": "stdout", "text": "\n4\n"}]}),
         ],
+        flush_time=0.1,
     )
 
 
@@ -600,7 +607,6 @@ def test_snoop():
     double(5)
         """)
     check_simple(code, [
-        ('output', {'parts': [{'type': 'snoop', 'text': ''}]}),
         ('output', {'parts': [{'type': 'snoop', 'text': (
             '    2 | def double(x):\n'
             '    5 | double(5)\n'  
