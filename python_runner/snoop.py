@@ -23,7 +23,7 @@ class SnoopStream(SysStream):
     def flush(self):
         pass
 
-def exec_snoop(runner, code_obj, config):
+def exec_snoop(runner, code_obj, snoop_config=None):
     class PatchedFrameInfo(snoop.tracer.FrameInfo):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -32,7 +32,14 @@ def exec_snoop(runner, code_obj, config):
     snoop.tracer.FrameInfo = PatchedFrameInfo
 
     snoop.formatting.Source._class_local('__source_cache', {}).pop(runner.filename, None)
-
+    default_config = dict(
+        columns=(),
+        out=sys.stdout,
+        color=True,
+    )
+    if snoop_config is not None: # Merge options, overriding when appropriate
+        default_config = default_config | snoop_config
+    config = snoop.Config(**default_config)
     tracer = config.snoop()
     tracer.variable_whitelist = set()
     for node in ast.walk(ast.parse(runner.source_code)):

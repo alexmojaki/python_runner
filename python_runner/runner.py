@@ -65,21 +65,12 @@ class Runner:
     def output(self, output_type, text, **extra):
         return self.output_buffer.put(output_type, text, **extra)
 
-    def snoop_config(self, out=None, color=False):
-        import snoop
-        if out is None:
-            from .snoop import SnoopStream
-            out = SnoopStream(self.output_buffer)
-        return snoop.Config(
-            columns=(),
-            out=out,
-            color=color,
-        )
-
-    def execute(self, code_obj, mode=None):  # noqa
+    def execute(self, code_obj, mode=None, snoop_config=None):  # noqa
         if mode == "snoop":
-            from .snoop import exec_snoop
-            exec_snoop(self, code_obj, config=self.snoop_config())
+            from .snoop import exec_snoop, SnoopStream
+            if snoop_config is None:
+               snoop_config = dict(out=SnoopStream(self.output_buffer), color=False)
+            exec_snoop(self, code_obj, snoop_config=snoop_config)
         else:
             return eval(code_obj, self.console.locals)  # noqa
 
@@ -92,17 +83,17 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
-    def run(self, source_code, mode="exec"):
+    def run(self, source_code, mode="exec", snoop_config=None):
         code_obj = self.pre_run(source_code, mode=mode)
         with self._execute_context():
             if code_obj:
-                return self.execute(code_obj, mode=mode)
+                return self.execute(code_obj, mode=mode, snoop_config=snoop_config)
 
-    async def run_async(self, source_code, mode="exec", top_level_await=True):
+    async def run_async(self, source_code, mode="exec", top_level_await=True, snoop_config=None):
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context():
             if code_obj:
-                result = self.execute(code_obj, mode=mode)
+                result = self.execute(code_obj, mode=mode, snoop_config=snoop_config)
                 while isinstance(result, Awaitable):
                     result = await result
                 return result
