@@ -10,7 +10,7 @@ from collections.abc import Awaitable
 from contextlib import contextmanager
 from types import ModuleType
 
-from .output import OutputBuffer, SysStream
+from .output import OutputBuffer
 
 log = logging.getLogger(__name__)
 

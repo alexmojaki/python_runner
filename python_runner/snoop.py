@@ -1,7 +1,6 @@
 import ast
 import inspect
 import os
-import sys
 
 import snoop
 import snoop.formatting
@@ -21,10 +20,11 @@ class SnoopStream(SysStream):
         super().__init__("snoop", output_buffer)
 
     def flush(self):
-        pass
+        pass  # pragma: no cover
+
 
 def exec_snoop(runner, code_obj, snoop_config):
-    class PatchedFrameInfo(snoop.tracer.FrameInfo):
+    class PatchedFrameInfo(snoop.tracer.FrameInfo):  # pragma: no cover (happens inside snoop's trace function)
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.is_ipython_cell = self.frame.f_code == code_obj
