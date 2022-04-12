@@ -91,17 +91,17 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
-    def run(self, source_code, mode="exec", **kwargs):
+    def run(self, source_code, mode="exec"):
         code_obj = self.pre_run(source_code, mode=mode)
         with self._execute_context():
             if code_obj:
-                return self.execute(code_obj, mode=mode, **kwargs)
+                return self.execute(code_obj, mode=mode)
 
-    async def run_async(self, source_code, mode="exec", top_level_await=True, **kwargs):
+    async def run_async(self, source_code, mode="exec", top_level_await=True):
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context():
             if code_obj:
-                result = self.execute(code_obj, mode=mode, **kwargs)
+                result = self.execute(code_obj, mode=mode)
                 while isinstance(result, Awaitable):
                     result = await result
                 return result
