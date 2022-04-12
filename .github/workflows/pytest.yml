@@ -15,7 +15,7 @@ jobs:
     - name: run tests
       run: |
         pip install -U pip
-        pip install --upgrade coveralls setuptools setuptools_scm pep517 snoop
+        pip install --upgrade coveralls setuptools setuptools_scm pep517
         pip install .[tests]
         coverage run --source python_runner -m pytest
         coverage report -m

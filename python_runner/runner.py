@@ -65,11 +65,22 @@ class Runner:
     def output(self, output_type, text, **extra):
         return self.output_buffer.put(output_type, text, **extra)
 
-    def execute(self, code_obj, mode=None, **kwargs):  # noqa
+    def snoop_config(self, out=None, color=False):
+        import snoop
+        if out is None:
+            out = SysStream("snoop", self.output_buffer)
+        return snoop.Config(
+            columns=(),
+            out=out,
+            color=color,
+        )
+
+    def execute(self, code_obj, mode=None):  # noqa
         if mode == "snoop":
             from .snoop import exec_snoop
-            exec_snoop(self, code_obj, out=SysStream("snoop", self.output_buffer), **kwargs)
-        return eval(code_obj, self.console.locals)  # noqa
+            exec_snoop(self, code_obj, config=self.snoop_config())
+        else:
+            return eval(code_obj, self.console.locals)  # noqa
 
     @contextmanager
     def _execute_context(self):

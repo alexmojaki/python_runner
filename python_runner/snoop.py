@@ -15,7 +15,7 @@ snoop.tracer.internal_directories += (
 )
 
 
-def exec_snoop(runner, code_obj, out=sys.stdout, color=True):
+def exec_snoop(runner, code_obj, config=None):
     class PatchedFrameInfo(snoop.tracer.FrameInfo):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -25,10 +25,10 @@ def exec_snoop(runner, code_obj, out=sys.stdout, color=True):
 
     snoop.formatting.Source._class_local('__source_cache', {}).pop(runner.filename, None)
 
-    config = snoop.Config(
+    config = config or snoop.Config(
         columns=(),
-        out=out,
-        color=color,
+        out=sys.stdout,
+        color=True,
     )
     tracer = config.snoop()
     tracer.variable_whitelist = set()
@@ -39,9 +39,6 @@ def exec_snoop(runner, code_obj, out=sys.stdout, color=True):
     tracer.target_codes.add(code_obj)
 
     def find_code(root_code):
-        """
-        Trace all functions recursively, like trace_module_deep.
-        """
         for sub_code_obj in root_code.co_consts:
             if not inspect.iscode(sub_code_obj):
                 continue
