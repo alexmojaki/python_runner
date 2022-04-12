@@ -7,6 +7,8 @@ import snoop
 import snoop.formatting
 import snoop.tracer
 
+from .output import SysStream
+
 internal_dir = os.path.dirname(os.path.dirname(
     (lambda: 0).__code__.co_filename
 ))
@@ -14,8 +16,14 @@ snoop.tracer.internal_directories += (
     internal_dir,
 )
 
+class SnoopStream(SysStream):
+    def __init__(self, output_buffer):
+        super().__init__("snoop", output_buffer)
 
-def exec_snoop(runner, code_obj, config=None):
+    def flush(self):
+        pass
+
+def exec_snoop(runner, code_obj, config):
     class PatchedFrameInfo(snoop.tracer.FrameInfo):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -25,11 +33,6 @@ def exec_snoop(runner, code_obj, config=None):
 
     snoop.formatting.Source._class_local('__source_cache', {}).pop(runner.filename, None)
 
-    config = config or snoop.Config(
-        columns=(),
-        out=sys.stdout,
-        color=True,
-    )
     tracer = config.snoop()
     tracer.variable_whitelist = set()
     for node in ast.walk(ast.parse(runner.source_code)):

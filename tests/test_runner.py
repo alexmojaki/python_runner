@@ -23,6 +23,8 @@ class MyRunner(PatchedStdinRunner):
 
 events = []
 
+def default_filename():
+    return os.path.normcase(os.path.abspath("my_program.py"))
 
 def default_callback(event_type, data):
     events.append((event_type, data))
@@ -190,7 +192,7 @@ def test_mixed_output():
 
 
 def test_syntax_error():
-    filename = os.path.normcase(os.path.abspath("my_program.py"))
+    filename = default_filename()
     check_simple(
         "a b",
         [
@@ -462,7 +464,7 @@ def test_console_locals():
         "__package__": None,
         "__loader__": None,
         "__spec__": None,
-        "__file__": os.path.normcase(os.path.abspath("my_program.py")),
+        "__file__": default_filename(),
         "__builtins__": builtins.__dict__,
     }
 
@@ -477,7 +479,7 @@ def test_console_locals():
 
 
 def test_await_syntax_error():
-    filename = os.path.normcase(os.path.abspath("my_program.py"))
+    filename = default_filename()
     check_simple(
         "await b",
         [
@@ -589,14 +591,19 @@ def test_invalid_sleep():
                 raise
 
 def test_snoop():
+    filename = default_filename()
     code = dedent(
         """
-    x = 5
-    x *= 2
+    def double(x):
+        return 2*x
+
+    double(5)
         """)
     check_simple(code, [
-        ('output', {'parts': [{'text': '','type': 'snoop'}]}),
-        ('output', {'parts': [{'text': '    2 | x = 5\n', 'type': 'snoop'}]}),
-        ('output', {'parts': [{'text': '    3 | x *= 2\n', 'type': 'snoop'}]}),
-        ('output', {'parts': [{'text': ' ...... x = 10\n', 'type': 'snoop'}]})
-    ], mode="snoop")
+        ('output', {'parts': [{'type': 'snoop', 'text': ''}]}),
+        ('output', {'parts': [{'type': 'snoop', 'text': (
+            '    2 | def double(x):\n    5 | double(5)\n'  
+           f'     >>> Call to double in File "{filename}", line 2\n     ...... x = 5\n        2 | def double(x):\n        3 |   '
+            '  return 2*x\n     <<< Return value from double: 10\n    5 | double(5)\n'
+            )}]})
+        ], mode="snoop")

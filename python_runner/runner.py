@@ -68,7 +68,8 @@ class Runner:
     def snoop_config(self, out=None, color=False):
         import snoop
         if out is None:
-            out = SysStream("snoop", self.output_buffer)
+            from .snoop import SnoopStream
+            out = SnoopStream(self.output_buffer)
         return snoop.Config(
             columns=(),
             out=out,
