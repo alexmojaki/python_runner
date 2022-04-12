@@ -602,8 +602,14 @@ def test_snoop():
     check_simple(code, [
         ('output', {'parts': [{'type': 'snoop', 'text': ''}]}),
         ('output', {'parts': [{'type': 'snoop', 'text': (
-            '    2 | def double(x):\n    5 | double(5)\n'  
-           f'     >>> Call to double in File "{filename}", line 2\n     ...... x = 5\n        2 | def double(x):\n        3 |   '
-            '  return 2*x\n     <<< Return value from double: 10\n    5 | double(5)\n'
+            '    2 | def double(x):\n'
+            '    5 | double(5)\n'  
+           f'     >>> Call to double in File "{filename}", line 2\n'
+            '     ...... x = 5\n'
+            '        2 | def double(x):\n'
+            '        3 |   '
+            '  return 2*x\n'
+            '     <<< Return value from double: 10\n'
+            '    5 | double(5)\n'
             )}]})
         ], mode="snoop")
