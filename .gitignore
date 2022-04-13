@@ -11,4 +11,5 @@ venv
 *.pyo
 __pycache__
 .coverage
-tests/my_program.py
+# Ignore default file no matter where tests are run
+**/my_program.py

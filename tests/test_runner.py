@@ -10,8 +10,6 @@ import pytest
 from python_runner import PatchedStdinRunner, PatchedSleepRunner
 from python_runner.output import OutputBuffer
 
-OutputBuffer.flush_time = 0.1
-
 
 class MyRunner(PatchedStdinRunner):
     def serialize_traceback(self, exc):
@@ -23,6 +21,8 @@ class MyRunner(PatchedStdinRunner):
 
 events = []
 
+def default_filename():
+    return os.path.normcase(os.path.abspath("my_program.py"))
 
 def default_callback(event_type, data):
     events.append((event_type, data))
@@ -30,7 +30,15 @@ def default_callback(event_type, data):
         return f"input: {len(events)}"
 
 
-def check_simple(source_code, expected_events, mode="exec", runner=None):
+def check_simple(
+    source_code,
+    expected_events,
+    mode="exec",
+    runner=None,
+    flush_time=OutputBuffer.flush_time,
+):
+    OutputBuffer.flush_time = flush_time
+
     global events
     events = []
 
@@ -190,7 +198,7 @@ def test_mixed_output():
 
 
 def test_syntax_error():
-    filename = os.path.normcase(os.path.abspath("my_program.py"))
+    filename = default_filename()
     check_simple(
         "a b",
         [
@@ -437,6 +445,7 @@ def test_flush_time():
             ("output", {"parts": [{"type": "stdout", "text": "1\n2\n3"}]}),
             ("output", {"parts": [{"type": "stdout", "text": "\n4\n"}]}),
         ],
+        flush_time=0.1,
     )
 
 
@@ -462,7 +471,7 @@ def test_console_locals():
         "__package__": None,
         "__loader__": None,
         "__spec__": None,
-        "__file__": os.path.normcase(os.path.abspath("my_program.py")),
+        "__file__": default_filename(),
         "__builtins__": builtins.__dict__,
     }
 
@@ -477,7 +486,7 @@ def test_console_locals():
 
 
 def test_await_syntax_error():
-    filename = os.path.normcase(os.path.abspath("my_program.py"))
+    filename = default_filename()
     check_simple(
         "await b",
         [
@@ -587,3 +596,25 @@ def test_invalid_sleep():
                 with pytest.raises(type(e)):
                     runner.sleep(arg)
                 raise
+
+def test_snoop():
+    filename = default_filename()
+    code = dedent(
+        """
+    def double(x):
+        return 2*x
+
+    double(5)
+        """)
+    check_simple(code, [
+        ('output', {'parts': [{'type': 'snoop', 'text': (
+            '    2 | def double(x):\n'
+            '    5 | double(5)\n'  
+           f'     >>> Call to double in File "{filename}", line 2\n'
+            '     ...... x = 5\n'
+            '        2 | def double(x):\n'
+            '        3 |     return 2*x\n'
+            '     <<< Return value from double: 10\n'
+            '    5 | double(5)\n'
+            )}]})
+        ], mode="snoop")
