@@ -280,6 +280,35 @@ def test_simple_input():
     )
 
 
+def test_iter_stdin():
+    check_simple(
+        "import sys; print(next(iter(sys.stdin))); print('after')",
+        [
+            (
+                "input",
+                {"prompt": ""},
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"text": "input: 1\n", "type": "input"},
+                        {"text": "input: 1\n", "type": "stdout"},
+                    ]
+                },
+            ),
+            (
+                "output",
+                {
+                    "parts": [
+                        {"text": "\nafter\n", "type": "stdout"},
+                    ]
+                },
+            ),
+        ],
+    )
+
+
 def test_non_str_input():
     def callback(event_type, data):
         if event_type == "input":

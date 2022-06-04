@@ -142,9 +142,23 @@ class Runner:
         self.output_buffer.reset()
 
 
+class FakeStdin:
+    def __init__(self, readline):
+        self.readline = readline
+
+    def __getattr__(self, item):
+        return getattr(sys.__stdin__, item)
+
+    def __next__(self):
+        return self.readline()
+
+    def __iter__(self):
+        return self
+
+
 class PatchedStdinRunner(Runner):  # noqa
     def pre_run(self, *args, **kwargs):
-        sys.stdin.readline = self.readline
+        sys.stdin = FakeStdin(self.readline)
         builtins.input = self.input
         return super().pre_run(*args, **kwargs)
 
