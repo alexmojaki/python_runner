@@ -200,20 +200,12 @@ def test_mixed_output():
 
 def test_syntax_error():
     filename = default_filename()
-    if sys.version_info[:2] >= (3, 10):
-        text = (
-            f'  File "{filename}", line 1\n'
-            "    a b\n"
-            "    ^^^\n"
-            "SyntaxError: invalid syntax. Perhaps you forgot a comma?\n"
-        )
-    else:
-        text = (
-            f'  File "{filename}", line 1\n'
-            "    a b\n"
-            "      ^\n"
-            "SyntaxError: invalid syntax\n"
-        )
+    text = (
+        f'  File "{filename}", line 1\n'
+        "    a b\n"
+        "      ^\n"
+        "SyntaxError: invalid syntax\n"
+    )
 
     check_simple(
         "a b",
