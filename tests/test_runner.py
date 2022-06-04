@@ -1,6 +1,7 @@
 import asyncio
 import builtins
 import os
+import sys
 import time
 import traceback
 from textwrap import dedent
@@ -199,6 +200,21 @@ def test_mixed_output():
 
 def test_syntax_error():
     filename = default_filename()
+    if sys.version_info[:2] >= (3, 10):
+        text = (
+            f'  File "{filename}", line 1\n'
+            "    a b\n"
+            "    ^^^\n"
+            "SyntaxError: invalid syntax. Perhaps you forgot a comma?\n"
+        )
+    else:
+        text = (
+            f'  File "{filename}", line 1\n'
+            "    a b\n"
+            "      ^\n"
+            "SyntaxError: invalid syntax\n"
+        )
+
     check_simple(
         "a b",
         [
@@ -208,12 +224,7 @@ def test_syntax_error():
                     "parts": [
                         {
                             "type": "syntax_error",
-                            "text": (
-                                f'  File "{filename}", line 1\n'
-                                "    a b\n"
-                                "      ^\n"
-                                "SyntaxError: invalid syntax\n"
-                            ),
+                            "text": text,
                             "source_code": "a b",
                         }
                     ]
@@ -516,6 +527,20 @@ def test_console_locals():
 
 def test_await_syntax_error():
     filename = default_filename()
+    if sys.version_info[:2] >= (3, 10):
+        text = (
+            f'  File "{filename}", line 1\n'
+            "    await b\n"
+            "    ^^^^^^^\n"
+            "SyntaxError: 'await' outside function\n"
+        )
+    else:
+        text = (
+            f'  File "{filename}", line 1\n'
+            "    await b\n"
+            "    ^\n"
+            "SyntaxError: 'await' outside function\n"
+        )
     check_simple(
         "await b",
         [
@@ -525,12 +550,7 @@ def test_await_syntax_error():
                     "parts": [
                         {
                             "type": "syntax_error",
-                            "text": (
-                                f'  File "{filename}", line 1\n'
-                                '    await b\n'
-                                '    ^\n'
-                                "SyntaxError: 'await' outside function\n"
-                            ),
+                            "text": text,
                             "source_code": "await b",
                         }
                     ]
