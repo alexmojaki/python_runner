@@ -282,7 +282,7 @@ def test_simple_input():
 
 def test_iter_stdin():
     check_simple(
-        "import sys; print(next(iter(sys.stdin))); print('after')",
+        "import sys; print(next(iter(sys.stdin))); print(sys.stdin.close.__name__)",
         [
             (
                 "input",
@@ -301,7 +301,7 @@ def test_iter_stdin():
                 "output",
                 {
                     "parts": [
-                        {"text": "\nafter\n", "type": "stdout"},
+                        {"text": "\nclose\n", "type": "stdout"},
                     ]
                 },
             ),
