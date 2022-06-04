@@ -1,6 +1,7 @@
 import ast
 import inspect
 import os
+from types import CodeType
 
 import snoop  # type: ignore
 import snoop.formatting  # type: ignore
@@ -15,6 +16,11 @@ snoop.tracer.internal_directories += (
     internal_dir,
 )
 
+TYPING = False
+if TYPING:
+    from .runner import Runner
+
+
 class SnoopStream(SysStream):
     def __init__(self, output_buffer):
         super().__init__("snoop", output_buffer)
@@ -23,7 +29,7 @@ class SnoopStream(SysStream):
         pass  # pragma: no cover
 
 
-def exec_snoop(runner, code_obj, snoop_config):
+def exec_snoop(runner: 'Runner', code_obj: CodeType, snoop_config: dict):
     class PatchedFrameInfo(snoop.tracer.FrameInfo):  # pragma: no cover (happens inside snoop's trace function)
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -41,7 +47,7 @@ def exec_snoop(runner, code_obj, snoop_config):
             tracer.variable_whitelist.add(name)
     tracer.target_codes.add(code_obj)
 
-    def find_code(root_code):
+    def find_code(root_code: CodeType):
         for sub_code_obj in root_code.co_consts:
             if not inspect.iscode(sub_code_obj):
                 continue
