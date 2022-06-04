@@ -45,11 +45,9 @@ class OutputBuffer:
 
     @contextmanager
     def redirect_std_streams(self):
-        with (
-            redirect_stdout(SysStream("stdout", self)),  # noqa
-            redirect_stderr(SysStream("stderr", self)),  # noqa
-        ):
-            yield
+        with redirect_stdout(SysStream("stdout", self)):  # noqa
+            with redirect_stderr(SysStream("stderr", self)):  # noqa
+                yield
 
 
 class SysStream:

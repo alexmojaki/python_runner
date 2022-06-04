@@ -69,7 +69,7 @@ class Runner:
         if mode == "snoop":
             from .snoop import exec_snoop, SnoopStream
             default_config = dict(columns=(), out=SnoopStream(self.output_buffer), color=False)
-            exec_snoop(self, code_obj, snoop_config=default_config | (snoop_config or {}))
+            exec_snoop(self, code_obj, snoop_config={**default_config, **(snoop_config or {})})
         else:
             return eval(code_obj, self.console.locals)  # noqa
 

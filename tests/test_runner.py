@@ -516,13 +516,13 @@ def test_console_locals():
     }
 
     check_simple("x = 1", [], runner=runner)
-    assert runner.console.locals == base_locals | {"x": 1}
+    assert runner.console.locals == {**base_locals, "x": 1}
 
     check_simple("y = 2", [], runner=runner)
-    assert runner.console.locals == base_locals | {"y": 2}
+    assert runner.console.locals == {**base_locals, "y": 2}
 
     check_simple("z = 3", [], runner=runner, mode="single")
-    assert runner.console.locals == base_locals | {"y": 2, "z": 3}
+    assert runner.console.locals == {**base_locals, "y": 2, "z": 3}
 
 
 def test_await_syntax_error():
