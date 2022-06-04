@@ -1,21 +1,27 @@
 import sys
 import time
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
+from typing import List, Union, Any, Dict
 
 
 class OutputBuffer:
+    """
+    Buffers output to reduce the number of callback events.
+    """
+
+    # See should_flush
     flush_length = 1000
-    flush_time = 1
+    flush_time = 1  # seconds
 
     def __init__(self, flush):
         self._flush = flush
         self.reset()
 
     def reset(self):
-        self.parts = []
+        self.parts: List[Dict[str, Any]] = []
         self.last_time = time.time()
 
-    def put(self, output_type, text, **extra):
+    def put(self, output_type: str, text: Union[str, bytes], **extra):
         if isinstance(text, bytes):
             text = text.decode("utf8", "replace")
         if not isinstance(text, str):
@@ -30,7 +36,7 @@ class OutputBuffer:
         if self.should_flush():
             self.flush()
 
-    def should_flush(self):
+    def should_flush(self) -> bool:
         return (
             len(self.parts) > 1
             or self.last_time and time.time() - self.last_time > self.flush_time
@@ -51,14 +57,14 @@ class OutputBuffer:
 
 
 class SysStream:
-    def __init__(self, output_type, output_buffer):
+    def __init__(self, output_type: str, output_buffer: OutputBuffer):
         self.type = output_type
         self.output_buffer = output_buffer
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         return getattr(sys.__stdout__, item)
 
-    def write(self, s):
+    def write(self, s: Union[str, bytes]):
         self.output_buffer.put(self.type, s)
 
     def flush(self):
