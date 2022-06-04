@@ -8,11 +8,15 @@ import time
 from code import InteractiveConsole
 from collections.abc import Awaitable
 from contextlib import contextmanager
-from types import ModuleType
+from types import CodeType, ModuleType
+from typing import Callable, Any, Dict, Optional, Union
 
 from .output import OutputBuffer
 
 log = logging.getLogger(__name__)
+
+
+Callback = Callable[[str, Dict[str, Any]], Any]
 
 
 class Runner:
@@ -21,11 +25,11 @@ class Runner:
     def __init__(
         self,
         *,
-        callback=None,
-        source_code="",
-        filename="my_program.py",
+        callback: Callback = None,
+        source_code: str = "",
+        filename: str = "my_program.py",
     ):
-        self.set_callback(callback)
+        self.set_callback(callback)  # type: ignore
         self.set_filename(filename)
         self.set_source_code(source_code)
         self.console = InteractiveConsole()
@@ -34,13 +38,13 @@ class Runner:
         )
         self.reset()
 
-    def set_callback(self, callback):
+    def set_callback(self, callback: Callback):
         self._callback = callback
 
-    def set_filename(self, filename):
+    def set_filename(self, filename: str):
         self.filename = os.path.normcase(os.path.abspath(filename))
 
-    def set_source_code(self, source_code):
+    def set_source_code(self, source_code: str):
         self.source_code = source_code
         # Write to file if permitted by system
         try:
@@ -55,23 +59,34 @@ class Runner:
             self.filename,
         )
 
-
-    def callback(self, event_type, **data):
+    def callback(self, event_type: str, **data):
+        """
+        Calls the callback function passed to __init__ or set_callback.
+        May flush pending output which means the callback function
+        may be called with an output event before this one.
+        """
         if event_type != "output":
             self.output_buffer.flush()
 
         return self._callback(event_type, data)
 
-    def output(self, output_type, text, **extra):
+    def output(self, output_type: str, text: str, **extra):
+        """
+        Saves the given output data to eventually (perhaps immediately)
+        send it in a callback with event_type 'output'.
+        """
         return self.output_buffer.put(output_type, text, **extra)
 
-    def execute(self, code_obj, mode=None, snoop_config=None):  # noqa
+    def execute(self, code_obj: CodeType, mode: str = None, snoop_config: dict = None):
+        """
+        Executes a raw code object. This is an internal method, use `run` or `run_async` instead.
+        """
         if mode == "snoop":
             from .snoop import exec_snoop, SnoopStream
             default_config = dict(columns=(), out=SnoopStream(self.output_buffer), color=False)
             exec_snoop(self, code_obj, snoop_config={**default_config, **(snoop_config or {})})
         else:
-            return eval(code_obj, self.console.locals)  # noqa
+            return eval(code_obj, self.console.locals)  # type: ignore
 
     @contextmanager
     def _execute_context(self):
@@ -82,13 +97,37 @@ class Runner:
                 self.output("traceback", **self.serialize_traceback(e))
         self.post_run()
 
-    def run(self, source_code, mode="exec", snoop_config=None):
+    def run(self, source_code: str, mode: str = "exec", snoop_config: dict = None):
+        """
+        Run the given Python source_code.
+        See also run_async.
+
+        `mode` is typically 'exec', 'eval', or 'single',
+        which have the same meanings as for the `compile` builtin.
+
+        `mode` can also be 'snoop' which will run the code with the
+        [snoop](https://github.com/alexmojaki/snoop) debugger (installed separately).
+        An optional `snoop_config` dict can be passed
+        which will be used as keyword arguments for a snoop.Config object.
+
+        If `mode` is 'eval', the return value will be the evaluated expression if successful.
+        """
         code_obj = self.pre_run(source_code, mode=mode)
         with self._execute_context():
             if code_obj:
                 return self.execute(code_obj, mode=mode, snoop_config=snoop_config)
 
-    async def run_async(self, source_code, mode="exec", top_level_await=True, snoop_config=None):
+    async def run_async(
+        self,
+        source_code: str,
+        mode: str = "exec",
+        top_level_await: bool = True,
+        snoop_config: dict = None,
+    ):
+        """
+        Similar to the `run` method, but async.
+        `top_level_await` determines whether the `await` keyword is allowed outside a function.
+        """
         code_obj = self.pre_run(source_code, mode, top_level_await=top_level_await)
         with self._execute_context():
             if code_obj:
@@ -97,13 +136,30 @@ class Runner:
                     result = await result
                 return result
 
-    def serialize_traceback(self, exc):  # noqa
+    def serialize_traceback(self, exc: BaseException) -> dict:
+        """
+        Override this method to return a dict containing information about a captured user exception.
+        This will ultimately be sent in the callback as output.
+        It should at least have a key 'text' with a string value.
+        A simple implementation is:
+
+            import traceback
+            return dict(text=traceback.format_exc())
+        """
         raise NotImplementedError  # pragma: no cover
 
-    def serialize_syntax_error(self, exc):
+    def serialize_syntax_error(self, exc: BaseException) -> dict:
+        """
+        Similar to serialize_traceback but called when there's a SyntaxError while compiling user code.
+        """
         return self.serialize_traceback(exc)
 
-    def pre_run(self, source_code, mode="exec", top_level_await=False):
+    def pre_run(
+        self, source_code, mode="exec", top_level_await=False
+    ) -> Optional[CodeType]:
+        """
+        Compiles source_code into a code object.
+        """
         compile_mode = mode
         if mode == "single":
             source_code += "\n"  # Allow compiling single-line compound statements
@@ -125,16 +181,21 @@ class Runner:
             try:
                 if not ast.parse(self.source_code).body:
                     # Code is only comments, which cannot be compiled in 'single' mode
-                    return
+                    return None
             except SyntaxError:
                 pass
 
             self.output("syntax_error", **self.serialize_syntax_error(e))
+            return None
 
     def post_run(self):
         self.output_buffer.flush()
 
     def reset(self):
+        """
+        Called before running code 'from scratch' (i.e. when `mode` is not 'single' or 'eval')
+        to reset state such as global variables.
+        """
         mod = ModuleType("__main__")
         mod.__file__ = self.filename
         sys.modules["__main__"] = mod
@@ -166,10 +227,10 @@ class PatchedStdinRunner(Runner):  # noqa
         super().reset()
         self.line = ""
 
-    def non_str_input(self, value):
+    def non_str_input(self, value: Any):
         raise TypeError(f"Callback for input should return str, not {type(value).__name__}")
 
-    def readline(self, n=-1, prompt=""):
+    def readline(self, n=-1, prompt="") -> str:
         if not self.line and n:
             value = self.callback("input", prompt=prompt)
             if not isinstance(value, str):
@@ -185,7 +246,7 @@ class PatchedStdinRunner(Runner):  # noqa
         self.line = self.line[n:]
         return to_return
 
-    def input(self, prompt=""):
+    def input(self, prompt="") -> str:
         self.output("input_prompt", prompt)
         return self.readline(prompt=prompt)[:-1]  # Remove trailing newline
 
@@ -195,7 +256,7 @@ class PatchedSleepRunner(Runner):  # noqa
         time.sleep = self.sleep
         return super().pre_run(*args, **kwargs)
 
-    def sleep(self, seconds):
+    def sleep(self, seconds: Union[int, float]):
         if not isinstance(seconds, (int, float)):
             raise TypeError(f"an integer is required (got type {type(seconds).__name__})")
         if not seconds >= 0:
@@ -204,6 +265,10 @@ class PatchedSleepRunner(Runner):  # noqa
 
 
 class PyodideRunner(PatchedStdinRunner, PatchedSleepRunner):  # noqa # pragma: no cover
+    """
+    For use with https://github.com/alexmojaki/pyodide-worker-runner, especially `makeRunnerCallback`.
+    """
+
     ServiceWorkerError = RuntimeError(
         "The service worker for reading input isn't working. "
         "Try closing all this site's tabs, then reopening. "
@@ -218,7 +283,7 @@ class PyodideRunner(PatchedStdinRunner, PatchedSleepRunner):  # noqa # pragma: n
     InterruptError = KeyboardInterrupt
 
     def pyodide_error(self, e: Exception):
-        import pyodide  # noqa
+        import pyodide  # type: ignore  # noqa
 
         js_error = e.js_error  # type: ignore
         typ = getattr(js_error, "type", "")

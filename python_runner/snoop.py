@@ -2,9 +2,9 @@ import ast
 import inspect
 import os
 
-import snoop
-import snoop.formatting
-import snoop.tracer
+import snoop  # type: ignore
+import snoop.formatting  # type: ignore
+import snoop.tracer  # type: ignore
 
 from .output import SysStream
 
