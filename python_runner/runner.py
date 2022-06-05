@@ -137,7 +137,7 @@ class Runner:
                     result = await result
                 return result
 
-    def skip_traceback_internals(self, tb: TracebackType) -> TracebackType:
+    def skip_traceback_internals(self, tb: Optional[TracebackType]) -> Optional[TracebackType]:
         """
         Returns the traceback starting from the first frame in the code that was run,
         skipping frames from python_runner.
