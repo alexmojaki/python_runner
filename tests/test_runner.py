@@ -13,10 +13,13 @@ from python_runner.output import OutputBuffer
 
 
 class MyRunner(PatchedStdinRunner):
+    pass
+
+
+class NoTracebackRunner(MyRunner):
     def serialize_traceback(self, exc):
         return {
             "text": "".join(traceback.format_exception_only(type(exc), exc)),
-            "source_code": self.source_code,
         }
 
 
@@ -100,12 +103,12 @@ def test_stdout_write_non_str():
                         {
                             "type": "traceback",
                             "text": "TypeError: Can only write str, not int\n",
-                            "source_code": "import sys; sys.stdout.write(123)",
                         }
                     ],
                 },
             ),
         ],
+        runner=NoTracebackRunner(callback=default_callback),
     )
 
 
@@ -188,8 +191,10 @@ def test_mixed_output():
                         },
                         {
                             "type": "traceback",
-                            "text": "ZeroDivisionError: division by zero\n",
-                            "source_code": source,
+                            "text": 'Traceback (most recent call last):\n'
+                                    f'  File "{default_filename()}", line 16, in <module>\n'
+                                    '    1/0\n'
+                                    'ZeroDivisionError: division by zero\n',
                         },
                     ]
                 },
@@ -217,7 +222,6 @@ def test_syntax_error():
                         {
                             "type": "syntax_error",
                             "text": text,
-                            "source_code": "a b",
                         }
                     ]
                 },
@@ -236,8 +240,10 @@ def test_runtime_error():
                     "parts": [
                         {
                             "type": "traceback",
-                            "text": "NameError: name 'nonexistent' is not defined\n",
-                            "source_code": "nonexistent",
+                            "text": 'Traceback (most recent call last):\n'
+                                    f'  File "{default_filename()}", line 1, in <module>\n'
+                                    '    nonexistent\n'
+                                    "NameError: name 'nonexistent' is not defined\n",
                         }
                     ]
                 },
@@ -320,7 +326,7 @@ def test_non_str_input():
 
     check_simple(
         "input()",
-        runner=MyRunner(callback=callback),
+        runner=NoTracebackRunner(callback=callback),
         expected_events=[
             (
                 "output",
@@ -340,7 +346,6 @@ def test_non_str_input():
                         {
                             "type": "traceback",
                             "text": "TypeError: Callback for input should return str, not NoneType\n",
-                            "source_code": "input()",
                         }
                     ]
                 },
@@ -543,7 +548,6 @@ def test_await_syntax_error():
                         {
                             "type": "syntax_error",
                             "text": text,
-                            "source_code": "await b",
                         }
                     ]
                 },

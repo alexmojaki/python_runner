@@ -5,10 +5,11 @@ import logging
 import os
 import sys
 import time
+import traceback
 from code import InteractiveConsole
 from collections.abc import Awaitable
 from contextlib import contextmanager
-from types import CodeType, ModuleType
+from types import CodeType, ModuleType, TracebackType
 from typing import Callable, Any, Dict, Optional, Union
 
 from .output import OutputBuffer
@@ -136,17 +137,28 @@ class Runner:
                     result = await result
                 return result
 
+    def skip_traceback_internals(self, tb: TracebackType) -> TracebackType:
+        """
+        Returns the traceback starting from the first frame in the code that was run,
+        skipping frames from python_runner.
+        """
+        original = tb
+        while tb and tb.tb_frame.f_code.co_filename != self.filename:
+            tb = tb.tb_next
+        if tb:
+            return tb
+        else:
+            return original
+
     def serialize_traceback(self, exc: BaseException) -> dict:
         """
         Override this method to return a dict containing information about a captured user exception.
         This will ultimately be sent in the callback as output.
         It should at least have a key 'text' with a string value.
-        A simple implementation is:
-
-            import traceback
-            return dict(text=traceback.format_exc())
         """
-        raise NotImplementedError  # pragma: no cover
+        tb = self.skip_traceback_internals(exc.__traceback__)
+        lines = traceback.format_exception(type(exc), exc, tb)
+        return dict(text="".join(lines))
 
     def serialize_syntax_error(self, exc: BaseException) -> dict:
         """
@@ -185,6 +197,7 @@ class Runner:
             except SyntaxError:
                 pass
 
+            e.__traceback__ = None
             self.output("syntax_error", **self.serialize_syntax_error(e))
             return None
 
